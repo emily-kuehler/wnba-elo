@@ -201,7 +201,6 @@ scrape_historical_gamelogs <- function() {
   
   first_wnba_season <- min(team_url_df$From)
   last_completed_wnba_season <- max(team_url_df$To) - 1
-  #last_completed_wnba_season <- 2002
   seasons <- seq(from = first_wnba_season, to = last_completed_wnba_season)
   
   unique_team_urls <- unique(team_url_df$url)
@@ -215,8 +214,19 @@ scrape_historical_gamelogs <- function() {
   
 }
 
-historical_game_logs <- scrape_historical_gamelogs()
+scrape_current_season_gamelogs <- function() {
+  
+  team_url_df <- get_wnba_bball_ref_team_urls()
+  game_logs <- map2(.x = unique(team_url_df$url), .y = max(team_url_df$To), .f = get_season_game_logs, team_url_df) %>% 
+    bind_rows() %>% 
+    filter(!is.na(team_pts))
+  
+  return (game_logs)
+  
+}
 
+current_game_logs <- scrape_current_season_gamelogs()
+  
 
 
 

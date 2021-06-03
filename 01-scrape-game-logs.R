@@ -60,9 +60,48 @@ get_wnba_bball_ref_team_urls <- function() {
   team_df_unique_url <- team_df %>% 
     anti_join(duplicate_urls)
   
-  #close.connection(base_teams_url)
+  #go to next page
+  # team_active_season <- get_team_active_seasons(team_df_unique_url$url[2])
   
-  return (team_df_unique_url)
+  team_active_seasons <- map(.x = team_df_unique_url$url, .f = get_team_active_seasons) %>%
+    bind_rows()
+  
+  return (team_active_seasons)
+  
+}
+
+get_team_active_seasons <- function(team_url) {
+  
+  team_code <- str_sub(team_url, start = -4, end = -2)
+  table_node <- paste0("table#",team_code)
+  
+  full_team_url <- paste0("https://www.basketball-reference.com",team_url)
+  
+  wnba_full_team_url <- try_catch_get_url(full_team_url)
+  
+  wnba_team_page <- try_catch_read_html(wnba_full_team_url)
+  
+  url_ <- wnba_team_page %>%
+    rvest::html_nodes("a") %>%
+    rvest::html_attr("href")
+  
+  team_table <- wnba_team_page %>% 
+    html_nodes(table_node) %>% 
+    html_table() %>% 
+    pluck(1) %>% 
+    select(season = Year,
+           team = Team)
+  
+  team_url_df <- tibble(url = url_) %>% 
+    filter(str_detect(url,"/wnba/teams/[A-Za-z][A-Za-z][A-Za-z]/[0-9][0-9]")) %>% 
+    mutate(season = as.numeric(str_sub(url, start = -9, end = -6)))
+  
+  team_table_df <- team_table %>% 
+    inner_join(team_url_df) %>% 
+    mutate(team = str_replace(team, "\\*", ''),
+           team_code = team_code,
+           games_url = str_sub(url,1,nchar(url)-5),
+           games_url = paste0(games_url,"_games.html"))
   
 }
 
@@ -90,13 +129,20 @@ try_catch_get_url <- function(x) {
 
 get_season_game_logs <- function(team_url, season, team_url_df) {
   
-  team_game_log_url_str <- paste0("https://www.basketball-reference.com/", team_url, season, "_games.html")
+  team_game_log_url_str <- paste0("https://www.basketball-reference.com/", team_url)
   
   team_game_log_url <- try_catch_get_url(team_game_log_url_str)
   
   curr_team <- team_url_df %>% 
-    filter(url == team_url) %>% 
-    pull(Team)
+    filter(games_url == team_url) %>% 
+    pull(team)
+  
+  curr_team_code <- team_url_df %>% 
+    filter(games_url == team_url) %>% 
+    pull(team_code)
+  
+  print("8====D")
+  print(curr_team_code)
   
   webpage <- try_catch_read_html(team_game_log_url)
   
@@ -159,7 +205,7 @@ get_season_game_logs <- function(team_url, season, team_url_df) {
              home_team = ifelse(home_away == '',team,opponent),
              visit_team = ifelse(home_away == '@',team,opponent),
              season = season,
-             club_code = team_url,
+             club_code = curr_team_code,
              win_loss = ifelse(win_loss == "W",1,0)) %>% 
       select(team_game_num,
              date,
@@ -183,6 +229,7 @@ get_season_game_logs <- function(team_url, season, team_url_df) {
     
   } else {
     
+    print(team_game_log_url)
     close.connection(team_game_log_url)
     print(showConnections())
     
@@ -199,16 +246,15 @@ scrape_historical_gamelogs <- function() {
   
   team_url_df <- get_wnba_bball_ref_team_urls()
   
-  first_wnba_season <- min(team_url_df$From)
-  last_completed_wnba_season <- max(team_url_df$To) - 1
-  seasons <- seq(from = first_wnba_season, to = last_completed_wnba_season)
+  curr_season <- max(team_url_df$season)
   
-  unique_team_urls <- unique(team_url_df$url)
+  historical_team_url_df <- team_url_df %>% 
+    filter(season != curr_season)
   
-  url_season_list <- list(url = unique_team_urls, season = seasons)
-  url_season_cross <- cross_df(url_season_list)
-  
-  historical_game_logs <- map2_df(.x = url_season_cross$url, .y = url_season_cross$season, .f = get_season_game_logs, team_url_df)
+  historical_game_logs <- map2_df(.x = historical_team_url_df$games_url, 
+                                  .y = historical_team_url_df$season,
+                                  .f = get_season_game_logs,
+                                  historical_team_url_df)
   
   return (historical_game_logs)
   
@@ -217,16 +263,27 @@ scrape_historical_gamelogs <- function() {
 scrape_current_season_gamelogs <- function() {
   
   team_url_df <- get_wnba_bball_ref_team_urls()
-  game_logs <- map2(.x = unique(team_url_df$url), .y = max(team_url_df$To), .f = get_season_game_logs, team_url_df) %>% 
-    bind_rows() %>% 
-    filter(!is.na(team_pts))
+  
+  curr_season <- max(team_url_df$season)
+  
+  curr_team_url_df <- team_url_df %>% 
+    filter(season == curr_season)
+  
+  game_logs <- map2_df(.x = curr_team_url_df$games_url,
+                       .y = curr_team_url_df$season,
+                       .f = get_season_game_logs,
+                       curr_team_url_df)
   
   return (game_logs)
   
 }
-
-current_game_logs <- scrape_current_season_gamelogs()
   
+historical_gamelogs <- scrape_historical_gamelogs()
+
+current_season_gamelogs <- scrape_current_season_gamelogs()
 
 
 
+
+
+  

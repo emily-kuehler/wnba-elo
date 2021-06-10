@@ -141,9 +141,6 @@ get_season_game_logs <- function(team_url, season, team_url_df) {
     filter(games_url == team_url) %>% 
     pull(team_code)
   
-  print("8====D")
-  print(curr_team_code)
-  
   webpage <- try_catch_read_html(team_game_log_url)
   
   if (!is.na(webpage)) {
@@ -281,9 +278,3 @@ scrape_current_season_gamelogs <- function() {
 historical_gamelogs <- scrape_historical_gamelogs()
 
 current_season_gamelogs <- scrape_current_season_gamelogs()
-
-
-
-
-
-  

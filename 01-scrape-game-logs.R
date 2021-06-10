@@ -216,7 +216,9 @@ get_season_game_logs <- function(team_url, season, team_url_df) {
              season_type,
              season,
              club_code
-             )
+             ) %>% 
+      mutate(team = ifelse(str_detect(team, "San Antonio"), "San Antonio", team),
+             opponent = ifelse(str_detect(opponent, "San Antonio"), "San Antonio", opponent))
     
     #close.connection(team_game_log_url)
     

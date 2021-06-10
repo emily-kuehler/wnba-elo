@@ -4,19 +4,23 @@ source("00-load-params.R")
 source("01-scrape-game-logs.R")
 
 
-initialize_elo_values <- function(game_log_df, season) {
+elo_vals_97 <- calculate_single_season(historical_gamelogs, 1997)
+
+initialize_elo_values <- function(game_log_df, season = 1997, elo_df = NULL) {
   
   if (season == 1997) {
     
     game_logs <- game_log_df %>% 
       filter(season == season) %>% 
-      mutate(pregame_elo = ifelse(team_game_num == 1, INIT_ELO, NA_integer_)) 
+      mutate(pregame_elo = ifelse(team_game_num == 1, INIT_ELO, NA_integer_))
     
   } else {
     
     #initialize with values from end of previous season
-    # prev_season_df <- game_log_df %>% 
-    #   filter(season == season - 1) %>% 
+    prev_season_df <- elo_df %>%
+      filter(season == season - 1)
+    
+    return (prev_season_df)
     
   }
   
@@ -55,9 +59,7 @@ calculate_single_season <- function(game_log_df, season) {
   
   initialized_df <- initialize_elo_values(game_log_df = game_log_df, season = season)
   
-  #return (initialized_df)
-  
-  print ("8====D")
+  return (initialized_df)
   
   #write function to get opp and team pregame elo
   for (i in 1:nrow(initialized_df)) {
@@ -98,6 +100,8 @@ calculate_single_season <- function(game_log_df, season) {
   return(initialized_df)
   
 }
+
+test_df <- initialize_elo_values(historical_gamelogs)
 
 
 #need to calculate postgame elo for initialized values

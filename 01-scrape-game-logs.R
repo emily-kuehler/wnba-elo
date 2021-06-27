@@ -276,6 +276,12 @@ scrape_current_season_gamelogs <- function() {
   return (game_logs)
   
 }
+
+clean_game_logs <- function(historical_gamelogs, current_season_gamelogs) {
+  
+  
+  
+}
   
 historical_gamelogs <- scrape_historical_gamelogs()
 

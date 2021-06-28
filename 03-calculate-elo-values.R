@@ -4,21 +4,53 @@ source("00-load-params.R")
 source("01-scrape-game-logs.R")
 
 
-elo_vals_97 <- calculate_single_season(historical_gamelogs, season = 1997)
+elo_vals_97 <- calculate_single_season(clean_game_logs_df, season = 1997)
 
-elo_vals_98 <- calculate_single_season(historical_gamelogs, season = 1998, elo_df = elo_vals_97)
+elo_vals_98 <- calculate_single_season(clean_game_logs_df, season = 1998, elo_df = elo_vals_97)
 
-elo_vals_99 <- calculate_single_season(historical_gamelogs, season = 1999, elo_df = elo_vals_98)
+elo_vals_99 <- calculate_single_season(clean_game_logs_df, season = 1999, elo_df = elo_vals_98)
 
-elo_vals_00 <- calculate_single_season(historical_gamelogs, season = 2000, elo_df = elo_vals_99)
+elo_vals_00 <- calculate_single_season(clean_game_logs_df, season = 2000, elo_df = elo_vals_99)
 
-elo_vals_01 <- calculate_single_season(historical_gamelogs, season = 2001, elo_df = elo_vals_00)
+elo_vals_01 <- calculate_single_season(clean_game_logs_df, season = 2001, elo_df = elo_vals_00)
 
-elo_vals_02 <- calculate_single_season(historical_gamelogs, season = 2002, elo_df = elo_vals_01)
+elo_vals_02 <- calculate_single_season(clean_game_logs_df, season = 2002, elo_df = elo_vals_01)
 
-elo_vals_03 <- calculate_single_season(historical_gamelogs, season = 2003, elo_df = elo_vals_02)
+elo_vals_03 <- calculate_single_season(clean_game_logs_df, season = 2003, elo_df = elo_vals_02)
 
-elo_vals_04 <- calculate_single_season(historical_gamelogs, season = 2004, elo_df = elo_vals_03)
+elo_vals_04 <- calculate_single_season(clean_game_logs_df, season = 2004, elo_df = elo_vals_03)
+
+elo_vals_05 <- calculate_single_season(clean_game_logs_df, season = 2005, elo_df = elo_vals_04)
+
+elo_vals_06 <- calculate_single_season(clean_game_logs_df, season = 2006, elo_df = elo_vals_05)
+
+elo_vals_07 <- calculate_single_season(clean_game_logs_df, season = 2007, elo_df = elo_vals_06)
+
+elo_vals_08 <- calculate_single_season(clean_game_logs_df, season = 2008, elo_df = elo_vals_07)
+
+elo_vals_09 <- calculate_single_season(clean_game_logs_df, season = 2009, elo_df = elo_vals_08)
+
+elo_vals_10 <- calculate_single_season(clean_game_logs_df, season = 2010, elo_df = elo_vals_09)
+
+elo_vals_11 <- calculate_single_season(clean_game_logs_df, season = 2011, elo_df = elo_vals_10)
+
+elo_vals_12 <- calculate_single_season(clean_game_logs_df, season = 2012, elo_df = elo_vals_11)
+
+elo_vals_13 <- calculate_single_season(clean_game_logs_df, season = 2013, elo_df = elo_vals_12)
+
+elo_vals_14 <- calculate_single_season(clean_game_logs_df, season = 2014, elo_df = elo_vals_13)
+
+elo_vals_15 <- calculate_single_season(clean_game_logs_df, season = 2015, elo_df = elo_vals_14)
+
+elo_vals_16 <- calculate_single_season(clean_game_logs_df, season = 2016, elo_df = elo_vals_15)
+
+elo_vals_17 <- calculate_single_season(clean_game_logs_df, season = 2017, elo_df = elo_vals_16)
+
+elo_vals_18 <- calculate_single_season(clean_game_logs_df, season = 2018, elo_df = elo_vals_17)
+
+elo_vals_19 <- calculate_single_season(clean_game_logs_df, season = 2019, elo_df = elo_vals_18)
+
+elo_vals_20 <- calculate_single_season(clean_game_logs_df, season = 2020, elo_df = elo_vals_19)
 
 
 initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL) {

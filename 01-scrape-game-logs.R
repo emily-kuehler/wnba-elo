@@ -277,12 +277,44 @@ scrape_current_season_gamelogs <- function() {
   
 }
 
-clean_game_logs <- function(historical_gamelogs, current_season_gamelogs) {
+
+# clean gamelogs ----------------------------------------------------------
+
+get_average_win_loss_scores <- function(game_log_df, curr_season = 2018) {
   
+  avg_scores <- historical_gamelogs %>% 
+    filter(season == curr_season) %>% 
+    filter(!is.na(team_pts) & !is.na(opp_pts)) %>% 
+    mutate(win_score = if_else(win_loss == 1, team_pts, opp_pts),
+           losing_score = if_else(win_loss == 1, opp_pts, team_pts)) %>% 
+    summarise(avg_win_score = round(mean(win_score)),
+              avg_losing_score = round(mean(losing_score)))
   
+  return (avg_scores)
+  
+}
+
+
+
+#there was a forfeit in 2018, fill with average win / loss scores
+clean_game_logs <- function(historical_gamelogs) {
+  
+  scores_2018 <- get_average_win_loss_scores(historical_gamelogs)
+  winner_pts <- scores_2018$avg_win_score
+  loser_pts <- scores_2018$avg_losing_score
+  
+  historical_gamelogs <- historical_gamelogs %>% 
+    mutate(team_pts = if_else(team_game_num == 27 & club_code == 'SAS', loser_pts, team_pts),
+           team_pts = if_else(team_game_num == 27 & club_code == 'WAS', winner_pts, team_pts),
+           opp_pts = if_else(team_game_num == 27 & club_code == 'SAS', winner_pts, opp_pts),
+           opp_pts = if_else(team_game_num == 27 & club_code == 'WAS', loser_pts, opp_pts))
+  
+  return (historical_gamelogs)
   
 }
   
 historical_gamelogs <- scrape_historical_gamelogs()
+
+clean_game_logs_df <- clean_game_logs(historical_gamelogs)
 
 current_season_gamelogs <- scrape_current_season_gamelogs()

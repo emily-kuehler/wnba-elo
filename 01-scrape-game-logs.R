@@ -185,8 +185,9 @@ get_season_game_logs <- function(team_url, season, team_url_df) {
                w = W,
                l = L,
                streak = Streak) %>% 
-        filter(game_id != 'G') %>% 
-        mutate_at(str_vars, as.character) %>% 
+        filter(game_id != 'G') %>%
+        mutate_at(str_vars, as.character) %>%
+        mutate(home_away = ifelse(is.na(home_away) , "" , home_away)) %>%
         mutate_at(num_vars, as.numeric) %>% 
         mutate(season_type = "post")
       

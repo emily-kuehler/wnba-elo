@@ -96,16 +96,19 @@ initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL
     arrange(game_date) %>% 
     # calculate postgame elo for initialized elo values
     mutate(s_val = ifelse(win_loss == 1,1,0),
-           winner_elo = ifelse(s_val == 1,pregame_elo_tm,pregame_elo_opp),
-           loser_elo = ifelse(s_val == 0,pregame_elo_tm,pregame_elo_opp),
-           wp_expon = (pregame_elo_opp - pregame_elo_tm) / 400,
+           home_team = ifelse(home_team == team,1,0),
+           pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm + 100, pregame_elo_tm),
+           pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_opp + 100, pregame_elo_opp),
+           winner_elo = ifelse(s_val == 1,pregame_elo_tm_adj,pregame_elo_opp_adj),
+           loser_elo = ifelse(s_val == 0,pregame_elo_tm_adj,pregame_elo_opp_adj),
+           wp_expon = (pregame_elo_opp_adj - pregame_elo_tm_adj) / 400,
            wp = 1 / (1 + 10 ** wp_expon),
            mov_winner = abs(team_pts - opp_pts),
            elo_diff_winner = winner_elo - loser_elo,
            k_val_num = (mov_winner + 3) ** 0.8,
            k_val_denom = 7.5 + 0.006 * (elo_diff_winner),
            k_val = 20 * k_val_num / k_val_denom,
-           post_game_elo_tm = k_val * (s_val - wp) + pregame_elo_tm
+           post_game_elo_tm = k_val * (s_val - wp) + pregame_elo_tm_adj
            
     )
            
@@ -137,16 +140,21 @@ calculate_single_season <- function(game_log_df, season, elo_df) {
       
       curr_row <- curr_row %>%
         mutate(s_val = ifelse(win_loss == 1,1,0),
-               winner_elo = ifelse(s_val == 1,pregame_elo_tm,pregame_elo_opp),
-               loser_elo = ifelse(s_val == 0,pregame_elo_tm,pregame_elo_opp),
-               wp_expon = (pregame_elo_opp - pregame_elo_tm) / 400,
+               home_team = ifelse(home_team == team,1,0),
+               pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm + 100, pregame_elo_tm),
+               pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_opp + 100, pregame_elo_opp),
+               winner_elo = ifelse(s_val == 1,pregame_elo_tm_adj,pregame_elo_opp_adj),
+               loser_elo = ifelse(s_val == 0,pregame_elo_tm_adj,pregame_elo_opp_adj),
+               wp_expon = (pregame_elo_opp_adj - pregame_elo_tm_adj) / 400,
                wp = 1 / (1 + 10 ** wp_expon),
                mov_winner = abs(team_pts - opp_pts),
                elo_diff_winner = winner_elo - loser_elo,
                k_val_num = (mov_winner + 3) ** 0.8,
                k_val_denom = 7.5 + 0.006 * (elo_diff_winner),
                k_val = 20 * k_val_num / k_val_denom,
-               post_game_elo_tm = k_val * (s_val - wp) + pregame_elo_tm)
+               post_game_elo_tm = k_val * (s_val - wp) + pregame_elo_tm_adj
+               
+        )
       
       initialized_df[i,] <- curr_row
 

@@ -3,54 +3,29 @@ library(lubridate)
 source("00-load-params.R")
 source("01-scrape-game-logs.R")
 
-
-elo_vals_97 <- calculate_single_season(clean_game_logs_df, season = 1997)
-
-elo_vals_98 <- calculate_single_season(clean_game_logs_df, season = 1998, elo_df = elo_vals_97)
-
-elo_vals_99 <- calculate_single_season(clean_game_logs_df, season = 1999, elo_df = elo_vals_98)
-
-elo_vals_00 <- calculate_single_season(clean_game_logs_df, season = 2000, elo_df = elo_vals_99)
-
-elo_vals_01 <- calculate_single_season(clean_game_logs_df, season = 2001, elo_df = elo_vals_00)
-
-elo_vals_02 <- calculate_single_season(clean_game_logs_df, season = 2002, elo_df = elo_vals_01)
-
-elo_vals_03 <- calculate_single_season(clean_game_logs_df, season = 2003, elo_df = elo_vals_02)
-
-elo_vals_04 <- calculate_single_season(clean_game_logs_df, season = 2004, elo_df = elo_vals_03)
-
-elo_vals_05 <- calculate_single_season(clean_game_logs_df, season = 2005, elo_df = elo_vals_04)
-
-elo_vals_06 <- calculate_single_season(clean_game_logs_df, season = 2006, elo_df = elo_vals_05)
-
-elo_vals_07 <- calculate_single_season(clean_game_logs_df, season = 2007, elo_df = elo_vals_06)
-
-elo_vals_08 <- calculate_single_season(clean_game_logs_df, season = 2008, elo_df = elo_vals_07)
-
-elo_vals_09 <- calculate_single_season(clean_game_logs_df, season = 2009, elo_df = elo_vals_08)
-
-elo_vals_10 <- calculate_single_season(clean_game_logs_df, season = 2010, elo_df = elo_vals_09)
-
-elo_vals_11 <- calculate_single_season(clean_game_logs_df, season = 2011, elo_df = elo_vals_10)
-
-elo_vals_12 <- calculate_single_season(clean_game_logs_df, season = 2012, elo_df = elo_vals_11)
-
-elo_vals_13 <- calculate_single_season(clean_game_logs_df, season = 2013, elo_df = elo_vals_12)
-
-elo_vals_14 <- calculate_single_season(clean_game_logs_df, season = 2014, elo_df = elo_vals_13)
-
-elo_vals_15 <- calculate_single_season(clean_game_logs_df, season = 2015, elo_df = elo_vals_14)
-
-elo_vals_16 <- calculate_single_season(clean_game_logs_df, season = 2016, elo_df = elo_vals_15)
-
-elo_vals_17 <- calculate_single_season(clean_game_logs_df, season = 2017, elo_df = elo_vals_16)
-
-elo_vals_18 <- calculate_single_season(clean_game_logs_df, season = 2018, elo_df = elo_vals_17)
-
-elo_vals_19 <- calculate_single_season(clean_game_logs_df, season = 2019, elo_df = elo_vals_18)
-
-elo_vals_20 <- calculate_single_season(clean_game_logs_df, season = 2020, elo_df = elo_vals_19)
+calculate_all_elo_vals <- function(game_log_df) {
+  
+  elo_list <- list()
+  
+  elo_list[[1]] <- calculate_single_season(game_log_df = game_log_df, season = INIT_SEASON)
+  
+  for (i in (INIT_SEASON + 1):FINAL_SEASON) {
+    
+    last_element <- length(elo_list)
+    
+    curr_elo_df <- elo_list[[last_element]]
+    
+    elo_vals <- calculate_single_season(game_log_df, season = i, elo_df = curr_elo_df)
+    
+    elo_list[[i-INIT_SEASON + 1]] <- elo_vals
+    
+    print (i)
+    
+  }
+  
+  return (elo_list)
+  
+}
 
 
 initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL) {
@@ -63,7 +38,7 @@ initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL
     
   } else {
     
-    print ("8=====D")
+    #print ("8=====D")
     
     #initialize with values from end of previous season
     prev_season_df <- elo_df %>%
@@ -97,8 +72,8 @@ initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL
     # calculate postgame elo for initialized elo values
     mutate(s_val = ifelse(win_loss == 1,1,0),
            home_team = ifelse(home_team == team,1,0),
-           pregame_elo_tm = 0.75 * pregame_elo_tm + 1505 * 0.25,
-           pregame_elo_opp = 0.75 * pregame_elo_opp + 1505 * 0.25,
+           pregame_elo_tm = ifelse(pregame_elo_tm != INIT_ELO & team_game_num == 1, 0.75 * pregame_elo_tm + 1505 * 0.25, pregame_elo_tm),
+           pregame_elo_opp = ifelse(pregame_elo_opp != INIT_ELO & opp_game_num == 1, 0.75 * pregame_elo_opp + 1505 * 0.25, pregame_elo_opp),
            pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm + 100, pregame_elo_tm),
            pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_opp + 100, pregame_elo_opp),
            winner_elo = ifelse(s_val == 1,pregame_elo_tm,pregame_elo_opp),
@@ -143,8 +118,8 @@ calculate_single_season <- function(game_log_df, season, elo_df) {
       curr_row <- curr_row %>%
         mutate(s_val = ifelse(win_loss == 1,1,0),
                home_team = ifelse(home_team == team,1,0),
-               pregame_elo_tm = 0.75 * pregame_elo_tm + 1505 * 0.25,
-               pregame_elo_opp = 0.75 * pregame_elo_opp + 1505 * 0.25,
+               #pregame_elo_tm = 0.75 * pregame_elo_tm + 1505 * 0.25,
+               #pregame_elo_opp = 0.75 * pregame_elo_opp + 1505 * 0.25,
                pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm + 100, pregame_elo_tm),
                pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_opp + 100, pregame_elo_opp),
                winner_elo = ifelse(s_val == 1,pregame_elo_tm,pregame_elo_opp),
@@ -176,7 +151,7 @@ calculate_single_season <- function(game_log_df, season, elo_df) {
 #logic: if pregame_elo_tm 
 get_prev_elo_vals <- function(game_log_df, row_num) {
   
-  print (row_num)
+  #print (row_num)
   
   curr_row <- game_log_df[row_num,]
   
@@ -206,5 +181,6 @@ get_prev_elo_vals <- function(game_log_df, row_num) {
   
 }
 
-
+elo_val_list <- calculate_all_elo_vals(clean_game_logs_df) %>% 
+  bind_rows()
 

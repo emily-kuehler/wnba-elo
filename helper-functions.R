@@ -1,8 +1,9 @@
-source("01-scrape-game-logs.R")
 
-# database connections ----------------------------------------------------
+# database functions ------------------------------------------------------
 
-connect_to_aws_db <- function(pw = 'miggy479') {
+database_pw <- read_csv("secrets.txt")
+
+connect_to_aws_db <- function(pw = database_pw$pw) {
   
   dbhost <- 'db-sports.csmeuaw95l7j.us-west-2.rds.amazonaws.com'
   

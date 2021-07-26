@@ -1,7 +1,7 @@
 library(lubridate)
 
-source("00-load-params.R")
-source("01-scrape-game-logs.R")
+# source("00-load-params.R")
+# source("01-scrape-game-logs.R")
 
 calculate_all_elo_vals <- function(game_log_df) {
   

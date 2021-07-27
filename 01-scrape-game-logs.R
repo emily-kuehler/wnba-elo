@@ -279,6 +279,115 @@ scrape_current_season_gamelogs <- function() {
 }
 
 
+# scrape league standings -------------------------------------------------
+
+get_league_standings <- function(curr_season) {
+  
+  base_url <- "https://www.basketball-reference.com/wnba/years/"
+  
+  conference_standings_str <- paste0(base_url, curr_season, ".html")
+  
+  webpage <- rvest::read_html(conference_standings_str)
+  
+  eastern_conf_standings <- webpage %>%
+    rvest::html_nodes("table#standings_e") %>%
+    rvest::html_table() %>%
+    pluck(1) %>% 
+    mutate(conference = "eastern") %>% 
+    rename(team = `Eastern Conference`)
+  
+  western_conf_standings <- webpage %>% 
+    rvest::html_nodes("table#standings_w") %>% 
+    rvest::html_table() %>% 
+    pluck(1) %>% 
+    mutate(conference = "western") %>% 
+    rename(team = `Western Conference`)
+  
+  reg_season_standings <- eastern_conf_standings %>% 
+    bind_rows(western_conf_standings) %>% 
+    mutate(season = curr_season)
+  
+  print(curr_season)
+  
+  return (season_standings)
+  
+}
+
+get_playoff_table <- function(curr_season) {
+  
+  playoff_rounds <- c("First Round", "Second Round", 
+                      "Eastern Conference Semifinals",
+                      "Western Conference Semifinals",
+                      "Semifinals",
+                      "Finals")
+  
+  base_url <- "https://www.basketball-reference.com/wnba/years/"
+  
+  conference_standings_str <- paste0(base_url, curr_season, ".html")
+  
+  webpage <- rvest::read_html(conference_standings_str)
+  
+  #save and work with the body
+  body <- rvest::html_node(webpage, "body") 
+  xml2::write_xml(body, "data/temp.xml")
+  
+  #find and remove comments
+  lines <- readLines("data/temp.xml")
+  lines<-lines[-grep("<!--", lines)]
+  lines<-lines[-grep("-->", lines)]
+  writeLines(lines, "data/temp.xml")
+  
+  #read the file back in and process normally
+  body <- rvest::read_html("data/temp.xml")
+  
+  playoff_results <- body %>%
+    rvest::html_nodes("table#all_playoffs") %>%
+    rvest::html_table() %>%
+    pluck(1) %>% 
+    filter(X1 %in% playoff_rounds) %>% 
+    select(round = X1,
+           result = X2) %>% 
+    mutate(season = curr_season)
+  
+  #remove unneeded xml file
+  if(file.exists("data/temp.xml")) {
+    file.remove("data/temp.xml")
+  }
+  
+  print(curr_season)
+  
+  return(playoff_results)
+  
+}
+
+scrape_league_standings <- function() {
+  
+  league_standings <- map(.x = INIT_SEASON:FINAL_SEASON, .f = get_league_standings) %>% 
+    bind_rows()
+  
+  return(league_standings)
+}
+
+
+scrape_playoff_results <- function() {
+  
+  playoff_results <- map(.x = INIT_SEASON:FINAL_SEASON, .f = get_playoff_table) %>% 
+    bind_rows() %>% 
+    separate(col = result, into = c("winner", "loser"), sep = "over") %>% 
+    mutate(loser2 = str_sub(loser, 1,-8),
+           record = str_sub(loser, -4,-2)) %>% 
+    select(-loser) %>% 
+    rename(loser = loser2)
+  
+  return(playoff_results)
+  
+}
+
+test_playoffs <- scrape_playoff_results()
+
+
+
+
 # clean gamelogs ----------------------------------------------------------
 
 get_average_win_loss_scores <- function(game_log_df, curr_season = 2018) {
@@ -294,6 +403,7 @@ get_average_win_loss_scores <- function(game_log_df, curr_season = 2018) {
   return (avg_scores)
   
 }
+
 
 
 

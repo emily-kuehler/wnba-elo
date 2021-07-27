@@ -19,3 +19,8 @@ connect_to_aws_db <- function(pw = database_pw$pw) {
   return (con)
   
 }
+
+
+# simulation helpers ------------------------------------------------------
+
+

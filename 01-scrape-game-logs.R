@@ -303,7 +303,7 @@ get_league_standings <- function(curr_season) {
     mutate(conference = "western") %>% 
     rename(team = `Western Conference`)
   
-  reg_season_standings <- eastern_conf_standings %>% 
+  season_standings <- eastern_conf_standings %>% 
     bind_rows(western_conf_standings) %>% 
     mutate(season = curr_season)
   
@@ -429,3 +429,7 @@ historical_gamelogs <- scrape_historical_gamelogs()
 clean_game_logs_df <- clean_game_logs(historical_gamelogs)
 
 current_season_gamelogs <- scrape_current_season_gamelogs()
+
+league_standings <- scrape_league_standings()
+
+playoff_results <- scrape_playoff_results()

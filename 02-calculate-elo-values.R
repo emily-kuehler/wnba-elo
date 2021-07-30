@@ -78,6 +78,7 @@ initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL
            pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_opp + 100, pregame_elo_opp),
            winner_elo = ifelse(s_val == 1,pregame_elo_tm,pregame_elo_opp),
            loser_elo = ifelse(s_val == 0,pregame_elo_tm,pregame_elo_opp),
+           #rerun with this line changed to adjusted values
            wp_expon = (pregame_elo_opp - pregame_elo_tm) / 400,
            wp = 1 / (1 + 10 ** wp_expon),
            mov_winner = abs(team_pts - opp_pts),

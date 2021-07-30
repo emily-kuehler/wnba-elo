@@ -5,20 +5,20 @@ my_con <- connect_to_aws_db()
 
 # simulate completed seasons ----------------------------------------------
 
-test_sim <- simulate_playoffs(curr_season = 1997)
-
 simulate_playoffs <- function(curr_season) {
+  
+  #collect data (universal)
   
   #league standings
   standings <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_league_standings") %>% 
-    filter(season == 1997) %>% 
+    filter(season == curr_season) %>% 
     mutate(team = str_remove(team, "[*]"))
   
   print("collected standings...")
   
   #get initial playoff values
   init_playoff_elo_vals <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_elo_vals") %>% 
-    filter(season == 1997 & season_type == 'post') %>% 
+    filter(season == curr_season & season_type == 'post') %>% 
     group_by(team) %>% 
     filter(game_date == min(game_date)) %>% 
     select(team, opponent, pregame_elo_tm, pregame_elo_opp, wp)
@@ -27,41 +27,32 @@ simulate_playoffs <- function(curr_season) {
   
   #initial playoff matchups
   matchups <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_playoff_results") %>% 
-    filter(season == 1997 & round == "Semifinals") %>% 
+    filter(season == curr_season) %>% 
     mutate(winner = str_trim(winner),
            loser = str_trim(loser))
   
   print("collected matchups")
   
-  #join matchups to init values
-  init_matchups <- matchups %>% 
-    inner_join(init_playoff_elo_vals, by = c("winner" = "team")) %>% 
-    rename(team1 = winner,
-           team2 = loser,
-           pregame_elo_tm1 = pregame_elo_tm,
-           pregame_elo_tm2 = pregame_elo_opp,
-           wp_tm1 = wp) %>% 
-    select(-opponent) %>% 
-    mutate(wp_tm2 = 1 - wp_tm1)
-  
-  #simulate round 1 playoffs
-  round1_results <- map(.x = init_matchups$wp_tm1, .f = simulate_elimination_round) %>% 
-    unlist()
-  
-  results <- init_matchups %>% 
-    mutate(team_1_wins = round1_results,
-           team_2_wins = N_SIMS - team_1_wins,
-           series_winner = if_else(team_1_wins > team_2_wins, team1, team2),
-           pregame_elo_winner = if_else(team_1_wins > team_2_wins, pregame_elo_tm1, pregame_elo_tm2),
-           pregame_elo_loser = if_else(team_1_wins > team_2_wins, pregame_elo_tm2, pregame_elo_tm1)) %>% 
-    select(team1, team2, team_1_wins, team_2_wins, series_winner, pregame_elo_winner, pregame_elo_loser)
-  
-  #simulate finals
-  finals_results <- simulate_1997_finals(semifinals_results = results,
-                                         wnba_standings = standings)
+  #clean data for relevant season
+  #simulate playoffs using rules for relevant season
+  if (curr_season == 1997) {
     
+    playoff_sim_results <- simulate_four_team_playoff(matchup_df = matchups,
+                                                      standings_df = standings,
+                                                      init_elos = init_playoff_elo_vals,
+                                                      single_elimination = T)
+    
+    return (playoff_sim_results)
+    
+  }
   
-  return (list(results, finals_results))
+  
+  #should be same as 1997, but we do a best of three instead of single elimination
+  if (curr_season == 1998) {
+    
+    return (NULL)
+    
+  }
   
 }
 
@@ -124,33 +115,72 @@ simulate_1997_finals <- function(semifinals_results, wnba_standings) {
 }
 
 
+#function works for 1997, 1998 playoffs
+#single elimination for 1997, best of 3 for 1998
+simulate_four_team_playoff <- function(matchup_df, 
+                                       standings_df,
+                                       init_elos,
+                                       single_elimination = T) {
+  
+  
+  matchups <- matchup_df %>% 
+    filter(round == "Semifinals")
+  
+  #join matchups to init values
+  init_matchups <- matchups %>% 
+    inner_join(init_elos, by = c("winner" = "team")) %>% 
+    rename(team1 = winner,
+           team2 = loser,
+           pregame_elo_tm1 = pregame_elo_tm,
+           pregame_elo_tm2 = pregame_elo_opp,
+           wp_tm1 = wp) %>% 
+    select(-opponent) %>% 
+    mutate(wp_tm2 = 1 - wp_tm1)
+  
+  #simulate round 1 playoffs
+  if (single_elimination == T) {
+    
+    round1_results <- map(.x = init_matchups$wp_tm1, .f = simulate_elimination_round) %>% 
+      unlist()
+    
+  } else {
+    
+    # do best of three simulation
+    
+  }
+  
+  results <- init_matchups %>% 
+    mutate(team_1_wins = round1_results,
+           team_2_wins = N_SIMS - team_1_wins,
+           series_winner = if_else(team_1_wins > team_2_wins, team1, team2),
+           pregame_elo_winner = if_else(team_1_wins > team_2_wins, pregame_elo_tm1, pregame_elo_tm2),
+           pregame_elo_loser = if_else(team_1_wins > team_2_wins, pregame_elo_tm2, pregame_elo_tm1)) %>% 
+    select(team1, team2, team_1_wins, team_2_wins, series_winner, pregame_elo_winner, pregame_elo_loser)
+  
+  #simulate finals
+  if (single_elimination == T) {
+    
+    finals_results <- simulate_1997_finals(semifinals_results = results,
+                                           wnba_standings = standings_df)
+    return (list(results, finals_results))
+    
+    
+    
+  } else {
+    
+    #do best of three simulation for finals
+    
+  }
+  
+  
+}
 
 
 
 
 
 
-# finals_test <- test_sim %>%
-#   inner_join(standings, by = c("series_winner" = "team")) %>% 
-#   select(team = series_winner,
-#          pregame_elo_tm = pregame_elo_winner,
-#          reg_season_wins = W,
-#          reg_season_losses = L,
-#          win_pct = `W/L%`)
-# 
-# finals_sim <- as_tibble(bind_cols(finals_test[1,], finals_test[2,]))
-# final_round_cols <- c("team1","pregame_elo_team1","reg_season_wins_team1","reg_season_losses_team1", "win_pct_team1",
-#                       "team2","pregame_elo_team2","reg_season_wins_team2","reg_season_losses_team2", "win_pct_team2")
-# names(finals_sim) <- final_round_cols
-# 
-# #need to calculate win probability
-# #calculate win probability for team1
-# finals_df <- finals_sim %>% 
-#   mutate(home_team = if_else(win_pct_team1 >= win_pct_team2, 1, 0),
-#          pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_team1 + 100, pregame_elo_team1),
-#          pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_team2 + 100, pregame_elo_team2),
-#          wp_expon = (pregame_elo_team2 - pregame_elo_team1) / 400,
-#          wp = 1 / (1 + 10 ** wp_expon))
+test_sim <- simulate_playoffs(curr_season = 1997)
 
 
 

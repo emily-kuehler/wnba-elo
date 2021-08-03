@@ -315,9 +315,13 @@ get_league_standings <- function(curr_season) {
 
 get_playoff_table <- function(curr_season) {
   
-  playoff_rounds <- c("First Round", "Second Round", 
+  playoff_rounds <- c("First Round", "Second Round",
+                      "Eastern Conference First Round",
+                      "Western Conference First Round",
                       "Eastern Conference Semifinals",
                       "Western Conference Semifinals",
+                      "Eastern Conference Finals",
+                      "Western Conference Finals",
                       "Semifinals",
                       "Finals")
   

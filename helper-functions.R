@@ -1,11 +1,11 @@
 
 # database functions ------------------------------------------------------
 
-database_pw <- read_csv("secrets.txt")
+database_df <- read_csv("secrets.txt")
 
-connect_to_aws_db <- function(pw = database_pw$pw) {
+connect_to_aws_db <- function(pw = database_df$pw) {
   
-  dbhost <- 'db-sports.csmeuaw95l7j.us-west-2.rds.amazonaws.com'
+  dbhost <- database_df$host
   
   con <- DBI::dbConnect(
     RPostgres::Postgres(),

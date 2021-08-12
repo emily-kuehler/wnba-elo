@@ -38,8 +38,6 @@ initialize_elo_values <- function(game_log_df, curr_season = 1997, elo_df = NULL
     
   } else {
     
-    #print ("8=====D")
-    
     #initialize with values from end of previous season
     prev_season_df <- elo_df %>%
       filter(season == curr_season - 1) %>% 

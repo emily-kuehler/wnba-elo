@@ -53,7 +53,8 @@ simulate_playoff_season <- function(curr_season) {
 
 
 
-# helpers -----------------------------------------------------------------
+
+# four team playoff -------------------------------------------------------
 
 
 simulate_four_team_playoff <- function(n_teams = 4,
@@ -62,7 +63,7 @@ simulate_four_team_playoff <- function(n_teams = 4,
                                        init_elos,
                                        single_elimination = T) {
   
-  n_teams <- 4
+  total_teams <- n_teams
   
   matchups <- matchup_df %>% 
     filter(round == "Semifinals")
@@ -143,6 +144,26 @@ simulate_four_team_playoff <- function(n_teams = 4,
     return (playoff_results)
   
 }
+
+
+# six team playoff --------------------------------------------------------
+
+simulate_six_team_playoff <- function(n_teams = 6,
+                                      matchup_df,
+                                      standings_df,
+                                      init_elos,
+                                      single_elimination = T) {
+  
+  
+  total_teams <- n_teams
+  
+  
+}
+
+
+# helpers -----------------------------------------------------------------
+
+
 
 get_single_elimination_results <- function(wp_tm1, team1, team2) {
   

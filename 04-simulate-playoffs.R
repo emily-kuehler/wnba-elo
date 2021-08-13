@@ -284,7 +284,7 @@ simulate_six_team_playoff <- function(matchup_df,
            team_2_wins = N_SIMS - team_1_wins,
            series_winner = if_else(team_1_wins > team_2_wins, team1, team2),
            pregame_elo_winner = if_else(team_1_wins > team_2_wins, pregame_elo_tm1, pregame_elo_tm2),
-           pregame_elo_loser = if_else(team_1_wins > team_2_wins, pregame_elo_tm2, pregame_elo_tm1)) %>% 
+           pregame_elo_loser = if_else(team_1_wins > teamd_2_wins, pregame_elo_tm2, pregame_elo_tm1)) %>% 
     select(team1, team2, team_1_wins, team_2_wins, series_winner, pregame_elo_winner, pregame_elo_loser)
   
   #get semifinals matchups

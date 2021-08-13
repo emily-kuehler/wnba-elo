@@ -387,8 +387,6 @@ scrape_playoff_results <- function() {
   
 }
 
-test_playoffs <- scrape_playoff_results()
-
 
 
 

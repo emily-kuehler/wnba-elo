@@ -54,6 +54,10 @@ simulate_playoff_season <- function(curr_season) {
     
     return (playoff_sim_results)
     
+  } else if (curr_season >= 2000 & curr_season <= 2004) {
+    
+    playoff_sim_results <- simulate_eight_team_playoff()
+    
   }
   
 }

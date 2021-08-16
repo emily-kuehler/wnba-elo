@@ -56,7 +56,14 @@ simulate_playoff_season <- function(curr_season) {
     
   } else if (curr_season >= 2000 & curr_season <= 2004) {
     
-    playoff_sim_results <- simulate_eight_team_playoff()
+    # playoff_sim_results <- simulate_eight_team_playoff(n_teams = 8,
+    #                                                    matchup_df = matchups,
+    #                                                    standings_df = standings,
+    #                                                    init_elos = init_playoff_elo_vals,
+    #                                                    single_elimination = T)
+    
+    playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_eight_team_playoff, matchups, standings, init_playoff_elo_vals, T) %>% 
+      bind_rows()
     
   }
   
@@ -279,6 +286,128 @@ simulate_six_team_playoff <- function(n_teams = 6,
 }
 
 
+
+# eight team playoff ------------------------------------------------------
+
+simulate_eight_team_playoff <- function(n_teams = 8,
+                                        matchup_df,
+                                        standings_df,
+                                        init_elos,
+                                        single_elimination = T) {
+  
+  #first round matchups
+  matchups <- matchup_df %>% 
+    filter(str_detect(round, "Semifinals"))
+  
+  #join matchups to init values
+  semis_matchups <- matchups %>% 
+    inner_join(init_elos, by = c("winner" = "team")) %>% 
+    rename(team1 = winner,
+           team2 = loser,
+           pregame_elo_tm1 = pregame_elo_tm,
+           pregame_elo_tm2 = pregame_elo_opp,
+           wp_tm1 = wp) %>% 
+    select(-opponent) %>% 
+    mutate(wp_tm2 = 1 - wp_tm1)
+  
+  #get results from semi final rounds
+  semis_list <- list(wp_tm1 = semis_matchups$wp_tm1,
+                     team1 = semis_matchups$team1,
+                     team2 =  semis_matchups$team2)
+  semis_winners <- pmap(.l = semis_list, .f = get_best_of_three_results) %>%
+    unlist()
+  
+  #two teams from each conference will play each other
+  semi_winners_df <- standings_df %>%
+    filter(team %in% semis_winners) %>% 
+    inner_join(init_elos, by = c("team")) %>% 
+    select(team, 
+           pregame_elo_tm,
+           reg_season_wins = W,
+           reg_season_losses = L,
+           win_pct = `W/L%`, 
+           conference) %>% 
+    group_by(conference) %>% 
+    arrange(desc(win_pct)) %>%
+    ungroup() %>% 
+    select(-conference)
+  
+  semi_finals_df_cols <- c("team1", "pregame_elo_tm1", "reg_season_wins_tm1", "reg_season_losses_tm1", "win_pct_tm1",
+                           "team2", "pregame_elo_tm2", "reg_season_wins_tm2", "reg_season_losses_tm2", "win_pct_tm2")
+  
+  conf1_winners <- semi_winners_df[1,] %>% 
+    bind_cols(semi_winners_df[2,])
+  
+  conf2_winners <- semi_winners_df[3,] %>% 
+    bind_cols(semi_winners_df[4,])
+  
+  names(conf1_winners) <- semi_finals_df_cols
+  names(conf2_winners) <- semi_finals_df_cols
+  
+  conf_finals_matchups <- conf1_winners %>% 
+    bind_rows(conf2_winners) %>% 
+    mutate(home_team = if_else(win_pct_tm1 >= win_pct_tm2, 1, 0),
+           pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm1 + 100, pregame_elo_tm1),
+           pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_tm2 + 100, pregame_elo_tm2),
+           wp_expon = (pregame_elo_tm2 - pregame_elo_tm1) / 400,
+           wp = 1 / (1 + 10 ** wp_expon)) %>%
+    select(team1, team2, pregame_elo_tm1, pregame_elo_tm2, wp_tm1 = wp) %>%
+    mutate(wp_tm2 = 1 - wp_tm1)
+  
+  
+  conf_finals_list <- list(wp_tm1 = conf_finals_matchups$wp_tm1,
+                           team1 = conf_finals_matchups$team1,
+                           team2 = conf_finals_matchups$team2)
+  conf_finals_winners <- pmap(.l = conf_finals_list, .f = get_best_of_three_results) %>%
+    unlist()
+  
+  #get overall winner
+  finals_matchups <- init_elos %>%
+    filter(team %in% conf_finals_winners) %>%
+    select(team, pregame_elo_tm, wp) %>%
+    inner_join(standings_df) %>%
+    select(team,
+           pregame_elo_tm,
+           reg_season_wins = W,
+           reg_season_losses = L,
+           win_pct = `W/L%`)
+  
+  finals_df_cols <- c("team1", "pregame_elo_tm1", "reg_season_wins_tm1", "reg_season_losses_tm1", "win_pct_tm1",
+                      "team2", "pregame_elo_tm2", "reg_season_wins_tm2", "reg_season_losses_tm2", "win_pct_tm2")
+  finals_wide <- data.frame(finals_matchups[1,], finals_matchups[2,])
+  names(finals_wide) <- finals_df_cols
+  
+  finals_df <- finals_wide %>%
+    mutate(home_team = if_else(win_pct_tm1 >= win_pct_tm2, 1, 0),
+           pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm1 + 100, pregame_elo_tm1),
+           pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_tm2 + 100, pregame_elo_tm2),
+           wp_expon = (pregame_elo_tm2 - pregame_elo_tm1) / 400,
+           wp = 1 / (1 + 10 ** wp_expon)) %>%
+    select(team1, team2, pregame_elo_tm1, pregame_elo_tm2, wp_tm1 = wp) %>%
+    mutate(wp_tm2 = 1 - wp_tm1)
+  
+  finals_winner <- get_best_of_three_results(finals_df$wp_tm1, finals_df$team1, finals_df$team2)
+  
+  conference_semis_results <- data.frame(round = "Conference Semifinals",
+                                         winner = semis_winners)
+  
+  conf_finals_results <- data.frame(round = "Conference Finals",
+                                    winner = conf_finals_winners)
+  
+  finals_results <- data.frame(round = "Finals",
+                               winner = finals_winner)
+  
+  playoff_results <- conference_semis_results %>% 
+    bind_rows(conf_finals_results) %>% 
+    bind_rows(finals_results)
+  
+  return (playoff_results)
+  
+}
+
+
+
+
 # helpers -----------------------------------------------------------------
 
 
@@ -314,4 +443,4 @@ get_best_of_three_results <- function(wp_tm1, team1, team2) {
 }
 
 
-test_sim <- simulate_playoff_season(curr_season = 1999)
+test_sim <- simulate_playoff_season(curr_season = 2000)

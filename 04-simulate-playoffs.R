@@ -56,13 +56,14 @@ simulate_playoff_season <- function(curr_season) {
     
   } else if (curr_season >= 2000 & curr_season <= 2004) {
     
-    # playoff_sim_results <- simulate_eight_team_playoff(n_teams = 8,
-    #                                                    matchup_df = matchups,
-    #                                                    standings_df = standings,
-    #                                                    init_elos = init_playoff_elo_vals,
-    #                                                    single_elimination = T)
-    
+    #these years have a best of three finals round
     playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_eight_team_playoff, matchups, standings, init_playoff_elo_vals, T) %>% 
+      bind_rows()
+    
+  } else if (curr_season > 2004 & curr_season <= 2015) {
+    
+    #these years have a best of five finals round
+    playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_eight_team_playoff, matchups, standings, init_playoff_elo_vals, F) %>% 
       bind_rows()
     
   }
@@ -293,7 +294,7 @@ simulate_eight_team_playoff <- function(n_teams = 8,
                                         matchup_df,
                                         standings_df,
                                         init_elos,
-                                        single_elimination = T) {
+                                        best_of_three_finals = T) {
   
   #first round matchups
   matchups <- matchup_df %>% 
@@ -386,7 +387,16 @@ simulate_eight_team_playoff <- function(n_teams = 8,
     select(team1, team2, pregame_elo_tm1, pregame_elo_tm2, wp_tm1 = wp) %>%
     mutate(wp_tm2 = 1 - wp_tm1)
   
-  finals_winner <- get_best_of_three_results(finals_df$wp_tm1, finals_df$team1, finals_df$team2)
+  
+  if (best_of_three_finals == T) {
+    
+    finals_winner <- get_best_of_three_results(finals_df$wp_tm1, finals_df$team1, finals_df$team2)
+    
+  } else {
+    
+    finals_winner <- get_best_of_five_results(finals_df$wp_tm1, finals_df$team1, finals_df$team2)
+    
+  }
   
   conference_semis_results <- data.frame(round = "Conference Semifinals",
                                          winner = semis_winners)
@@ -442,5 +452,23 @@ get_best_of_three_results <- function(wp_tm1, team1, team2) {
   
 }
 
+get_best_of_five_results <- function(wp_tm1, team1, team2) {
+  
+  result <- sample(x = c(team1,team2),
+                   size = 5,
+                   replace = T,
+                   prob = c(wp_tm1,
+                            1 - wp_tm1)) %>% 
+    as_tibble() %>% 
+    count(value) %>% 
+    rename(team = value,
+           wins = n) %>% 
+    filter(wins >= 3) %>% 
+    pull(team)
+  
+  return (result)
+  
+}
 
-test_sim <- simulate_playoff_season(curr_season = 2000)
+
+test_sim <- simulate_playoff_season(curr_season = 2005)

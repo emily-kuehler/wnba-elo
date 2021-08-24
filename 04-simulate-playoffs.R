@@ -1,3 +1,4 @@
+source("00-load-params.R")
 source("helper-functions.R")
 
 #need to make sure we are getting distribution of results
@@ -12,7 +13,12 @@ simulate_playoff_season <- function(curr_season) {
   #league standings
   standings <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_league_standings") %>% 
     filter(season == curr_season) %>% 
-    mutate(team = str_remove(team, "[*]"))
+    mutate(team = str_remove(team, "[*]"),
+           team = ifelse(str_detect(team, "San Antonio"), "San Antonio", team))
+  
+  # standings <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_league_standings") %>% 
+  #   filter(season == curr_season) %>% 
+  #   mutate(team = str_remove(team, "[*]"))
   
   print("collected standings...")
   
@@ -29,28 +35,43 @@ simulate_playoff_season <- function(curr_season) {
   matchups <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_playoff_results") %>% 
     filter(season == curr_season) %>% 
     mutate(winner = str_trim(winner),
-           loser = str_trim(loser))
+           loser = str_trim(loser),
+           winner = ifelse(str_detect(winner, "San Antonio"), "San Antonio", winner),
+           loser = ifelse(str_detect(loser, "San Antonio"), "San Antonio", loser))
+  # matchups <- DBI::dbGetQuery(my_con, "SELECT * FROM wnba_playoff_results") %>% 
+  #   filter(season == curr_season) %>% 
+  #   mutate(winner = str_trim(winner),
+  #          loser = str_trim(loser))
   
   print("collected matchups")
   
   if (curr_season == 1997) {
     
     playoff_sim_results <- map(.x = rep(x = 4, times = N_SIMS), .f = simulate_four_team_playoff, matchups, standings, init_playoff_elo_vals, T) %>% 
-      bind_rows()
+      bind_rows() %>% 
+      mutate(season = curr_season)
+    
+    print(paste0("finished season: ", curr_season))
     
     return (playoff_sim_results)
     
   } else if (curr_season == 1998) {
     
     playoff_sim_results <- map(.x = rep(x = 4, times = N_SIMS), .f = simulate_four_team_playoff, matchups, standings, init_playoff_elo_vals, F) %>%
-      bind_rows()
+      bind_rows() %>% 
+      mutate(season = curr_season)
+    
+    print(paste0("finished season: ", curr_season))
     
     return (playoff_sim_results)
     
   } else if (curr_season == 1999) {
     
     playoff_sim_results <- map(.x = rep(x = 6, times = N_SIMS), .f = simulate_six_team_playoff, matchups, standings, init_playoff_elo_vals, T) %>% 
-      bind_rows()
+      bind_rows() %>% 
+      mutate(season = curr_season)
+    
+    print(paste0("finished season: ", curr_season))
     
     return (playoff_sim_results)
     
@@ -58,19 +79,33 @@ simulate_playoff_season <- function(curr_season) {
     
     #these years have a best of three finals round
     playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_eight_team_playoff, matchups, standings, init_playoff_elo_vals, T) %>% 
-      bind_rows()
+      bind_rows() %>% 
+      mutate(season = curr_season)
+    
+    print(paste0("finished season: ", curr_season))
     
   } else if (curr_season > 2004 & curr_season <= 2015) {
     
     #these years have a best of five finals round
     playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_eight_team_playoff, matchups, standings, init_playoff_elo_vals, F) %>% 
-      bind_rows()
+      bind_rows() %>% 
+      mutate(season = curr_season)
+    
+    print(paste0("finished season: ", curr_season))
     
   } else if (curr_season >= 2016) {
     
-    playoff_sim_results <- simulate_four_round_playoff(matchup_df = matchups,
-                                                       standings_df = standings,
-                                                       init_elos = init_playoff_elo_vals)
+    playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_four_round_playoff, matchups, standings, init_playoff_elo_vals) %>% 
+      bind_rows() %>% 
+      mutate(season = curr_season)
+    
+    print(paste0("finished season: ", curr_season))
+    
+    # playoff_sim_results <- simulate_four_round_playoff(matchup_df = matchups,
+    #                                                    standings_df = standings,
+    #                                                    init_elos = init_playoff_elo_vals)
+    
+    return (playoff_sim_results)
     
   }
   
@@ -125,7 +160,7 @@ simulate_four_team_playoff <- function(n_teams = 4,
   finals_matchups <- init_elos %>%
     filter(team %in% semifinal_winners) %>%
     select(team, pregame_elo_tm, wp) %>%
-    inner_join(standings_df) %>%
+    inner_join(standings_df, by = c("team")) %>%
     select(team,
            pregame_elo_tm,
            reg_season_wins = W,
@@ -212,7 +247,7 @@ simulate_six_team_playoff <- function(n_teams = 6,
   
   play_in_winner_df <- init_elos %>% 
     filter(team %in% play_in_winners) %>% 
-    inner_join(standings_df) %>% 
+    inner_join(standings_df, by = c("team")) %>% 
     select(team1 = team,
            pregame_elo_tm1 = pregame_elo_tm,
            reg_season_wins_tm1 = W,
@@ -222,7 +257,7 @@ simulate_six_team_playoff <- function(n_teams = 6,
   
   top_seed_df <- init_elos %>% 
     filter(team %in% top_seeds$team) %>% 
-    inner_join(standings_df) %>% 
+    inner_join(standings_df, by = c("team")) %>% 
     select(team2 = team,
            pregame_elo_tm2 = pregame_elo_tm,
            reg_season_wins_tm2 = W,
@@ -232,7 +267,7 @@ simulate_six_team_playoff <- function(n_teams = 6,
   
   #get matchups and calculate new win probabilities
   conf_finals_matchups <- play_in_winner_df %>% 
-    inner_join(top_seed_df) %>% 
+    inner_join(top_seed_df, by = c("conference")) %>% 
     mutate(home_team = if_else(win_pct_tm1 >= win_pct_tm2, 1, 0),
            pregame_elo_tm_adj = ifelse(home_team == 1, pregame_elo_tm1 + 100, pregame_elo_tm1),
            pregame_elo_opp_adj = ifelse(home_team == 0, pregame_elo_tm2 + 100, pregame_elo_tm2),
@@ -252,7 +287,7 @@ simulate_six_team_playoff <- function(n_teams = 6,
   finals_matchups <- init_elos %>%
     filter(team %in% conf_finals_winners) %>%
     select(team, pregame_elo_tm, wp) %>%
-    inner_join(standings_df) %>%
+    inner_join(standings_df, by = c("team")) %>%
     select(team,
            pregame_elo_tm,
            reg_season_wins = W,
@@ -372,7 +407,7 @@ simulate_eight_team_playoff <- function(n_teams = 8,
   finals_matchups <- init_elos %>%
     filter(team %in% conf_finals_winners) %>%
     select(team, pregame_elo_tm, wp) %>%
-    inner_join(standings_df) %>%
+    inner_join(standings_df, by = c("team")) %>%
     select(team,
            pregame_elo_tm,
            reg_season_wins = W,
@@ -454,7 +489,7 @@ simulate_four_round_playoff <- function(n_teams = 8,
     rename(win_pct = `W/L%`) %>% 
     arrange(desc(win_pct)) %>% 
     slice(3:4) %>%
-    inner_join(init_elos) %>% 
+    inner_join(init_elos, by = c("team")) %>% 
     select(team1 = team,
            pregame_elo_tm1 = pregame_elo_tm,
            reg_season_wins_tm1 = W,
@@ -467,7 +502,7 @@ simulate_four_round_playoff <- function(n_teams = 8,
     filter(team %in% first_round_winners) %>% 
     rename(win_pct = `W/L%`) %>% 
     arrange(win_pct) %>%
-    inner_join(init_elos) %>% 
+    inner_join(init_elos, by = c("team")) %>% 
     select(team2 = team,
            pregame_elo_tm2 = pregame_elo_tm,
            reg_season_wins_tm2 = W,
@@ -497,7 +532,7 @@ simulate_four_round_playoff <- function(n_teams = 8,
     rename(win_pct = `W/L%`) %>% 
     arrange(desc(win_pct)) %>% 
     slice(1:2) %>%
-    inner_join(init_elos) %>% 
+    inner_join(init_elos, by = c("team")) %>% 
     select(team1 = team,
            pregame_elo_tm1 = pregame_elo_tm,
            reg_season_wins_tm1 = W,
@@ -508,7 +543,7 @@ simulate_four_round_playoff <- function(n_teams = 8,
     filter(team %in% second_round_winners) %>% 
     rename(win_pct = `W/L%`) %>% 
     arrange(win_pct) %>%
-    inner_join(init_elos) %>% 
+    inner_join(init_elos, by = c("team")) %>% 
     select(team2 = team,
            pregame_elo_tm2 = pregame_elo_tm,
            reg_season_wins_tm2 = W,
@@ -535,7 +570,7 @@ simulate_four_round_playoff <- function(n_teams = 8,
   finals_matchups <- init_elos %>%
     filter(team %in% semifinals_winners) %>%
     select(team, pregame_elo_tm, wp) %>%
-    inner_join(standings_df) %>%
+    inner_join(standings_df, by = c("team")) %>%
     select(team,
            pregame_elo_tm,
            reg_season_wins = W,
@@ -636,4 +671,7 @@ get_best_of_five_results <- function(wp_tm1, team1, team2) {
 }
 
 
-test_sim <- simulate_playoff_season(curr_season = 2016)
+set.seed(94110)
+test_sim <- simulate_playoff_season(curr_season = 2008)
+# full_simulation_results <- map(.x = INIT_SEASON:FINAL_SEASON, .f = simulate_playoff_season) %>% 
+#   bind_rows()

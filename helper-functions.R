@@ -1,6 +1,6 @@
 
 # database functions ------------------------------------------------------
-
+library(tidyverse)
 database_df <- read_csv("secrets.txt")
 
 connect_to_aws_db <- function(pw = database_df$pw) {

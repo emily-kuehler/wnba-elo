@@ -84,6 +84,8 @@ simulate_playoff_season <- function(curr_season) {
     
     print(paste0("finished season: ", curr_season))
     
+    return (playoff_sim_results)
+    
   } else if (curr_season > 2004 & curr_season <= 2015) {
     
     #these years have a best of five finals round
@@ -93,6 +95,8 @@ simulate_playoff_season <- function(curr_season) {
     
     print(paste0("finished season: ", curr_season))
     
+    return (playoff_sim_results)
+    
   } else if (curr_season >= 2016) {
     
     playoff_sim_results <- map(.x = rep(x = 8, times = N_SIMS), .f = simulate_four_round_playoff, matchups, standings, init_playoff_elo_vals) %>% 
@@ -100,10 +104,6 @@ simulate_playoff_season <- function(curr_season) {
       mutate(season = curr_season)
     
     print(paste0("finished season: ", curr_season))
-    
-    # playoff_sim_results <- simulate_four_round_playoff(matchup_df = matchups,
-    #                                                    standings_df = standings,
-    #                                                    init_elos = init_playoff_elo_vals)
     
     return (playoff_sim_results)
     
@@ -672,6 +672,5 @@ get_best_of_five_results <- function(wp_tm1, team1, team2) {
 
 
 set.seed(94110)
-test_sim <- simulate_playoff_season(curr_season = 2008)
-# full_simulation_results <- map(.x = INIT_SEASON:FINAL_SEASON, .f = simulate_playoff_season) %>% 
-#   bind_rows()
+full_simulation_results <- map(.x = INIT_SEASON:FINAL_SEASON, .f = simulate_playoff_season) %>%
+  bind_rows()

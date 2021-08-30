@@ -2,3 +2,4 @@
 secrets.txt
 explore.R
 .DS_Store
+*.csv

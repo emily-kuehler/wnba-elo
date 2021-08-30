@@ -1,7 +1,7 @@
 
 # database functions ------------------------------------------------------
 library(tidyverse)
-database_df <- read_csv("secrets.txt")
+database_df <- read_csv("~/Desktop/github/wnba-elo/secrets.txt")
 
 connect_to_aws_db <- function(pw = database_df$pw) {
   

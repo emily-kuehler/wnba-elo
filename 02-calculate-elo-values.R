@@ -3,6 +3,10 @@ library(lubridate)
 # source("00-load-params.R")
 # source("01-scrape-game-logs.R")
 
+source("helper-functions.R")
+
+clean_game_logs_df <- DBI::dbGetQuery(connect_to_aws_db(), "SELECT * FROM wnba_game_logs")
+
 calculate_all_elo_vals <- function(game_log_df) {
   
   elo_list <- list()
@@ -182,4 +186,13 @@ get_prev_elo_vals <- function(game_log_df, row_num) {
 
 elo_val_list <- calculate_all_elo_vals(clean_game_logs_df) %>% 
   bind_rows()
+
+date_df <- elo_val_list %>% 
+  select(game_date, season) %>% 
+  arrange(game_date) %>% 
+  distinct(game_date, season) %>% 
+  mutate(game_idx = row_number())
+
+elo_val_list <- elo_val_list %>% 
+  left_join(date_df, by = c("game_date", "season"))
 

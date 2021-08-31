@@ -61,16 +61,21 @@ plot_elo_values <- function(selected_teams, elo_vals, team_color_df) {
 
 # playoff probability table -----------------------------------------------
 
-get_playoff_probability_table <- function(sim_results_summary) {
+get_playoff_probability_table <- function(sim_results_summary, curr_season) {
   
-  playoff_table <- sim_results_summary %>% 
-    filter(season == 1997) %>% 
+  playoff_table_df <- sim_results_summary %>% 
+    filter(season == curr_season) %>% 
     select(-pct, -season) %>% 
     pivot_wider(names_from = round,
-                values_from = prop) %>% 
+                values_from = prop)
+  
+  playoff_rounds <- setdiff(names(playoff_table_df), "team")
+  all_cols <- names(playoff_table_df)
+  
+  playoff_table <- playoff_table_df %>% 
     gt() %>% 
     data_color(
-      columns = c("Semifinals","Finals"),
+      columns = all_of(playoff_rounds),
       colors = scales::col_numeric(
         # custom defined values - notice that order matters!
         palette = c("#f2fbd2", "#c9ecb4", "#93d3ab", "#35b0ab"),
@@ -78,20 +83,20 @@ get_playoff_probability_table <- function(sim_results_summary) {
       )
     ) %>%
     fmt_percent(
-      columns = c("Semifinals", "Finals"),
+      columns = all_of(playoff_rounds),
       decimals = 1
     ) %>% 
     tab_style(
       style = list(
         cell_borders(
-          sides = "left",
+          sides = "right",
           color = "black",
           weight = px(3)
         )
       ),
       locations = list(
         cells_body(
-          columns = c("Semifinals")
+          columns = c("team")
         )
       )
     ) %>% 
@@ -121,9 +126,10 @@ get_playoff_probability_table <- function(sim_results_summary) {
         )
       ),
       locations = list(
-        cells_body(columns = c("team", "Semifinals", "Finals"))
+        cells_body(columns = all_of(all_cols))
       )
     )
+  playoff_table
   return (playoff_table)
   
 }

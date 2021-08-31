@@ -1,6 +1,7 @@
 library(shiny)
 library(shinydashboard)
 library(showtext)
+library(gt)
 
 font_add_google("Roboto Mono")
 showtext_auto()
@@ -66,7 +67,7 @@ ui <- fluidPage(
                sidebarLayout(
                  sidebarPanel(
                    #helpText("Show Team ELO Values Over Time"),
-                   selectInput("teams",
+                   selectInput("season",
                                       label = "Select Season: ",
                                       choices = seasons,
                                       selected = 1997
@@ -97,7 +98,7 @@ server <- function(input, output) {
   
   output$playoffTable <- render_gt({
     
-    get_playoff_probability_table(sim_results_summary_df)
+    get_playoff_probability_table(sim_results_summary_df, input$season)
     
   })
   
